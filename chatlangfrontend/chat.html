@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat - ChatLang</title>
+  <link rel="stylesheet" href="chat.css" />
+</head>
+<body>
+   
+  <div class="chat-layout">
+
+    <!-- Sidebar -->
+    <aside class="user-list">
+      <div class="sidebar-header">
+        <a href="index.html" class="chatlang-logo">ChatLang</a>
+      </div>
+
+      <!-- Current User Profile -->
+      <div class="current-user">
+        <img src="https://flagcdn.com/w20/in.png" alt="Your Flag" />
+        <div>
+          <h4>You</h4>
+          <p>Speaks: English • Learning: Spanish</p>
+        </div>
+      </div>
+
+      <ul>
+        <li class="active">
+          <img src="https://flagcdn.com/w20/es.png" alt="ES Flag" />
+          <div>
+            <h4>María</h4>
+            <p>Speaks: Spanish • Learning: English</p>
+          </div>
+        </li>
+        <li>
+          <img src="https://flagcdn.com/w20/fr.png" alt="FR Flag" />
+          <div>
+            <h4>Pierre</h4>
+            <p>Speaks: French • Learning: Hindi</p>
+          </div>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Chat Window -->
+    <main class="chat-window hidden">
+  <p class="placeholder">👋 Select a user to start chatting</p>
+      <header class="chat-header">
+        <div class="partner-info">
+          <img src="https://flagcdn.com/w20/es.png" alt="Spanish Flag" />
+          <div>
+            <h3>María</h3>
+            <p>Spanish ↔ English</p>
+          </div>
+        </div>
+        <button class="end-chat" aria-label="End chat">✖</button>
+      </header>
+
+      <div class="chat-box" id="chat-box">
+        <div class="message left">
+          <span class="lang-tag es">ES</span> Hola! ¿Cómo estás?
+          <button class="translate-btn">🌐</button>
+        </div>
+        <div class="message right">
+          <span class="lang-tag en">EN</span> I’m good! How are you?
+          <button class="translate-btn">🌐</button>
+        </div>
+      </div>
+
+      <!-- Typing Indicator -->
+      <div id="typing-indicator" class="typing">María is typing...</div>
+
+      <!-- Chat Input -->
+      <div class="chat-input">
+        <input type="text" id="msg-input" placeholder="Type your message..." />
+        <button id="send-btn" aria-label="Send message">➤</button>
+      </div>
+    </main>
+
+  </div>
+
+  <script src="chat.js"></script>
+</body>
+</html>

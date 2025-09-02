@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Register - ChatLang</title>
+    <link rel="stylesheet" href="auth.css" />
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-box">
+            <h2>Create Account</h2>
+            <form>
+                <div class="input-group">
+                    <input type="text" required />
+                    <label>Username</label>
+                </div>
+                <div class="input-group">
+                    <input type="email" required />
+                    <label>Email</label>
+                </div>
+                <div class="input-group">
+                    <input type="password" required />
+                    <label>Password</label>
+                </div>
+                <button type="submit" class="cta-btn">Register</button>
+                <p class="switch">
+                    Already have an account? <a href="login.html">Login</a><br>
+                    <a href="index.html">← Back to Home</a>
+                </p>
+            </form>
+        </div>
+    </div>
+   
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("register-form");
+
+  if (!form) {
+    console.error("⚠️ Register form not found! Make sure the form has id='register-form'");
+    return;
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    // Grab values
+    const username = document.getElementById("username")?.value.trim();
+    const email = document.getElementById("email")?.value.trim();
+    const password = document.getElementById("password")?.value.trim();
+    const nativeLang = document.getElementById("nativeLang")?.value.trim();
+    const learningLang = document.getElementById("learningLang")?.value.trim();
+
+    // Basic validation
+    if (!username || !email || !password) {
+      alert("⚠️ Please fill all required fields.");
+      return;
+    }
+
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, email, password, nativeLang, learningLang })
+      });
+
+      const data = await res.json();
+      console.log("📩 Response:", data);
+
+      if (res.ok && data.success !== false) {
+        alert("✅ Registered successfully! Please login.");
+        window.location.href = "login.html";
+      } else {
+        alert("❌ Error: " + (data.message || data.msg || "Registration failed"));
+      }
+    } catch (err) {
+      console.error("🚨 Fetch error:", err);
+      alert("⚠️ Server error, try again.");
+    }
+  });
+});
+</script>
+
+
+
+
+</body>
+</html>

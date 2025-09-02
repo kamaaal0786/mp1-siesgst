@@ -1,0 +1,141 @@
+body {
+    font-family: 'Segoe UI', sans-serif;
+    margin: 0;
+    background: linear-gradient(135deg, #0077ff, #00c6ff);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* Container for centering */
+.auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+/* Glassmorphic Form Box */
+.auth-box {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(10px);
+    padding: 30px 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    width: 320px;
+    animation: fadeIn 0.8s ease forwards;
+}
+
+/* Heading */
+.auth-box h2 {
+    text-align: center;
+    color: #0077ff;
+    margin-bottom: 20px;
+}
+
+/* Input Groups */
+.input-group {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 12px 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background: transparent;
+    outline: none;
+    font-size: 14px;
+    color: #333;
+    transition: border 0.3s ease;
+}
+
+.input-group input:focus {
+    border-color: #0077ff;
+}
+
+.input-group label {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    font-size: 14px;
+    color: #888;
+    pointer-events: none;
+    transition: all 0.3s ease;
+}
+
+.input-group input:focus + label,
+.input-group input:valid + label {
+    top: -8px;
+    left: 8px;
+    font-size: 12px;
+    background: rgba(255, 255, 255, 0.85);
+    padding: 0 4px;
+    color: #0077ff;
+}
+
+/* Buttons */
+.cta-btn {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    border: none;
+    background: linear-gradient(90deg, #00c6ff, #0077ff);
+    color: white;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.cta-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 119, 255, 0.3);
+}
+
+/* Switch Links */
+.switch {
+    text-align: center;
+    margin-top: 15px;
+    font-size: 14px;
+}
+
+.switch a {
+    color: #0077ff;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.switch a:hover {
+    color: #005bb5;
+
+}
+.auth-container {
+  background: white;
+  padding: 30px;
+  border-radius: 15px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  width: 100%;
+  max-width: 400px;
+  margin: auto;
+}
+.auth-btn:hover {
+  transform: scale(1.05);
+}
+
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive */
+@media (max-width: 400px) {
+    .auth-box {
+        width: 90%;
+        padding: 20px;
+    }
+}
+

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - ChatLang</title>
+    <link rel="stylesheet" href="auth.css" />
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-box">
+            <h2>Login</h2>
+            <form>
+                <div class="input-group">
+                    <input type="email" required />
+                    <label>Email</label>
+                </div>
+                <div class="input-group">
+                    <input type="password" required />
+                    <label>Password</label>
+                </div>
+                <button type="submit" class="cta-btn">Login</button>
+                <p class="switch">
+                    Don’t have an account? <a href="register.html">Register</a><br>
+                    <a href="index.html">← Back to Home</a>
+                </p>
+            </form>
+        </div>
+    </div>
+ <script>
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("login-form");
+
+  if (!form) {
+    console.error("⚠️ Login form not found! Make sure the form has id='login-form'");
+    return;
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const email = document.getElementById("email")?.value.trim();
+    const password = document.getElementById("password")?.value.trim();
+
+    if (!email || !password) {
+      alert("⚠️ Please enter both email and password.");
+      return;
+    }
+
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+      console.log("📩 Login Response:", data);
+
+      if (res.ok && data.success !== false) {
+        alert("✅ Login successful! Redirecting to chat...");
+        if (data.token) localStorage.setItem("token", data.token);
+        if (data.user) localStorage.setItem("user", JSON.stringify(data.user));
+        window.location.href = "chat.html"; // redirect to chat page
+      } else {
+        alert("❌ Error: " + (data.message || data.msg || "Login failed"));
+      }
+    } catch (err) {
+      console.error("🚨 Fetch error:", err);
+      alert("⚠️ Server error, try again.");
+    }
+  });
+});
+</script>
+
+
+
+</body>
+</html>
