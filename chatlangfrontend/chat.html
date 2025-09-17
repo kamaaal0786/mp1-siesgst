@@ -1,85 +1,56 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Chat - ChatLang</title>
-  <link rel="stylesheet" href="chat.css" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ChatLang - Chat</title>
+    <link rel="stylesheet" href="chat.css" />
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
+
 <body>
-   
-  <div class="chat-layout">
+    <div class="chat-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h3>Users</h3>
+                <div class="theme-switcher">
+                    <input type="checkbox" id="theme-toggle" />
+                    <label for="theme-toggle"><span></span></label>
+                </div>
+                <button id="logout-btn">Logout</button>
+            </div>
+            <ul class="user-list" id="user-list">
+                <li class="user-item"><span>User One</span></li>
+                <li class="user-item active"><span>User Two</span></li>
+                <li class="user-item"><span>User Three</span></li>
+            </ul>
+        </aside>
 
-    <!-- Sidebar -->
-    <aside class="user-list">
-      <div class="sidebar-header">
-        <a href="index.html" class="chatlang-logo">ChatLang</a>
-      </div>
+        <main class="chat-window">
+            <header class="chat-header">
+                <h2>Chat with User Two</h2>
+            </header>
+            <div class="message-area" id="message-area">
+                <div class="message received">
+                    <p>Hey! How's it going?</p>
+                </div>
+                <div class="message sent">
+                    <p>I'm good, thanks! Ready to practice some Spanish?</p>
+                </div>
+            </div>
+            <form class="message-form" id="message-form">
+                <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off" />
+                <button type="submit">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
+                    </svg>
+                </button>
+            </form>
+        </main>
+    </div>
 
-      <!-- Current User Profile -->
-      <div class="current-user">
-        <img src="https://flagcdn.com/w20/in.png" alt="Your Flag" />
-        <div>
-          <h4>You</h4>
-          <p>Speaks: English • Learning: Spanish</p>
-        </div>
-      </div>
-
-      <ul>
-        <li class="active">
-          <img src="https://flagcdn.com/w20/es.png" alt="ES Flag" />
-          <div>
-            <h4>María</h4>
-            <p>Speaks: Spanish • Learning: English</p>
-          </div>
-        </li>
-        <li>
-          <img src="https://flagcdn.com/w20/fr.png" alt="FR Flag" />
-          <div>
-            <h4>Pierre</h4>
-            <p>Speaks: French • Learning: Hindi</p>
-          </div>
-        </li>
-      </ul>
-    </aside>
-
-    <!-- Chat Window -->
-    <main class="chat-window hidden">
-  <p class="placeholder">👋 Select a user to start chatting</p>
-      <header class="chat-header">
-        <div class="partner-info">
-          <img src="https://flagcdn.com/w20/es.png" alt="Spanish Flag" />
-          <div>
-            <h3>María</h3>
-            <p>Spanish ↔ English</p>
-          </div>
-        </div>
-        <button class="end-chat" aria-label="End chat">✖</button>
-      </header>
-
-      <div class="chat-box" id="chat-box">
-        <div class="message left">
-          <span class="lang-tag es">ES</span> Hola! ¿Cómo estás?
-          <button class="translate-btn">🌐</button>
-        </div>
-        <div class="message right">
-          <span class="lang-tag en">EN</span> I’m good! How are you?
-          <button class="translate-btn">🌐</button>
-        </div>
-      </div>
-
-      <!-- Typing Indicator -->
-      <div id="typing-indicator" class="typing">María is typing...</div>
-
-      <!-- Chat Input -->
-      <div class="chat-input">
-        <input type="text" id="msg-input" placeholder="Type your message..." />
-        <button id="send-btn" aria-label="Send message">➤</button>
-      </div>
-    </main>
-
-  </div>
-
-  <script src="chat.js"></script>
+    <script src="chat.js"></script>
 </body>
+
 </html>

@@ -1,14 +1,15 @@
-const mongoose = require("mongoose");
+// config/db.js
+
+const mongoose = require('mongoose');
 
 const connectDB = async () => {
   try {
-    await mongoose.connect("mongodb+srv://kamaalmagdoomaf2006_db_user:Chatlang123@chatlang.dgjoltt.mongodb.net/?retryWrites=true&w=majority&appName=chatlang", {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    console.log("✅ MongoDB Connected");
+    // The options object is no longer needed
+    const conn = await mongoose.connect(process.env.MONGO_URI);
+    
+    console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
-    console.error("❌ MongoDB Error:", error.message);
+    console.error(`Error: ${error.message}`);
     process.exit(1);
   }
 };

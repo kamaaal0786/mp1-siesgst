@@ -1,20 +1,11 @@
-// Simple scroll animation
-document.addEventListener("scroll", () => {
-    document.querySelectorAll(".feature-card").forEach((card) => {
-        const rect = card.getBoundingClientRect();
-        if (rect.top < window.innerHeight - 50) {
-            card.style.opacity = "1";
-            card.style.transform = "translateY(0)";
-        }
-    });
-});
-document.getElementById('menu-toggle').addEventListener('click', function () {
-    document.getElementById('nav-menu').classList.toggle('show');
-});
-document.querySelectorAll('#nav-menu a').forEach(link => {
-  link.addEventListener('click', () => {
-    document.getElementById('nav-menu').classList.remove('show');
-  });
-});
+document.addEventListener('DOMContentLoaded', () => {
+    const menuToggle = document.getElementById('menu-toggle');
+    const navMenu = document.getElementById('nav-menu');
 
-
+    // Logic to toggle the mobile navigation menu
+    if (menuToggle && navMenu) {
+        menuToggle.addEventListener('click', () => {
+            navMenu.classList.toggle('show');
+        });
+    }
+});
