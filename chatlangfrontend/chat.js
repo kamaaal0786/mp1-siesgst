@@ -1,99 +1,207 @@
-// chat.js (Updated)
-
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Page Protection ---
+    // --- 1. INITIAL CHECKS & SETUP ---
     const token = localStorage.getItem('token');
     if (!token) {
         window.location.href = 'login.html';
         return;
     }
 
-    // --- Theme Management ---
-    const themeToggle = document.getElementById('theme-toggle');
-    const body = document.body;
+    // Helper function to get user ID from the JWT payload
+    function decodeToken(token) {
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            return payload.user.id;
+        } catch (e) {
+            console.error('Invalid token:', e);
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+            return null;
+        }
+    }
+    const currentUserId = decodeToken(token);
+    if (!currentUserId) return; // Stop if token is invalid
 
-    // Function to apply the saved theme on page load
+    // --- 2. STATE MANAGEMENT ---
+    let activeRecipient = null; // To track who we are chatting with
+
+    // --- 3. DOM ELEMENTS ---
+    const body = document.body;
+    const themeToggleButton = document.getElementById('theme-toggle-btn');
+const sunIcon = themeToggleButton.querySelector('.fa-sun');
+const moonIcon = themeToggleButton.querySelector('.fa-moon');
+    const logoutBtn = document.getElementById('logout-btn');
+    const userList = document.getElementById('user-list');
+    const chatHeader = document.querySelector('.chat-header h2');
+    const messageArea = document.getElementById('message-area');
+    const messageForm = document.getElementById('message-form');
+    const messageInput = document.getElementById('message-input');
+    messageInput.disabled = true;
+messageInput.placeholder = 'Select a user to start chatting...';
+    chatHeader.textContent = 'Begin your chat!';
+
+    // --- 4. SOCKET.IO CONNECTION ---
+    const socket = io('http://localhost:5000');
+    
+    // A) Tell the server who we are once connected
+    socket.on('connect', () => {
+        console.log('Connected to server with socket ID:', socket.id);
+        socket.emit('storeUserId', currentUserId);
+    });
+
+    // B) Listen for incoming private messages (UPDATED)
+    socket.on('privateMessage', (messageData) => {
+        console.log('--- RECEIVED MESSAGE DATA FROM SERVER ---', messageData);
+        // Only display the message if it's from the person we're actively chatting with
+        if (activeRecipient && messageData.senderId === activeRecipient.id) {
+            displayMessage(messageData, 'received');
+        }
+    });
+    
+    // --- 5. FUNCTIONS ---
+
+    // Function to apply the saved theme from localStorage
     const applySavedTheme = () => {
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'dark') {
-            body.classList.add('dark-mode');
-            themeToggle.checked = true;
-        } else {
-            body.classList.remove('dark-mode');
-            themeToggle.checked = false;
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        body.classList.add('dark-mode');
+        sunIcon.classList.add('hidden');
+        moonIcon.classList.remove('hidden');
+    } else {
+        body.classList.remove('dark-mode');
+        sunIcon.classList.remove('hidden');
+        moonIcon.classList.add('hidden');
+    }
+};
+    // Function to fetch users and make the list interactive
+   const fetchAndDisplayUsers = async () => {
+        try {
+            const res = await fetch('http://localhost:5000/api/users', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error('Failed to fetch users');
+            
+            const users = await res.json();
+            userList.innerHTML = ''; 
+
+            users.forEach(user => {
+                const li = document.createElement('li');
+                li.className = 'user-item';
+                li.dataset.id = user._id; 
+                li.dataset.username = user.username;
+                li.innerHTML = `<span>${user.username} <small>(${user.nativeLanguage} -> ${user.targetLanguage})</small></span>`;
+                
+                // This entire click listener is updated
+                li.addEventListener('click', async () => { // Make the function async
+                    document.querySelectorAll('.user-item.active').forEach(item => item.classList.remove('active'));
+                    li.classList.add('active');
+                    activeRecipient = { id: user._id, username: user.username };
+                    chatHeader.textContent = `Chat with ${activeRecipient.username}`;
+                    messageInput.disabled = false;
+messageInput.placeholder = 'Type a message...';
+                    messageArea.innerHTML = ''; // Clear the message area first
+
+                    // --- NEW: Fetch and display chat history ---
+                    try {
+                        const historyRes = await fetch(`http://localhost:5000/api/messages/${activeRecipient.id}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const messageHistory = await historyRes.json();
+                        
+                        // Loop through the history and display each message
+                        messageHistory.forEach(msg => {
+                            const messageType = msg.senderId === currentUserId ? 'sent' : 'received';
+                            displayMessage(msg, messageType);
+                        });
+                    } catch (error) {
+                        console.error('Failed to fetch chat history:', error);
+                    }
+                    // --- END NEW ---
+                });
+                userList.appendChild(li);
+            });
+        } catch (error) {
+            console.error('Error fetching users:', error);
         }
     };
 
-    // Event listener for the theme toggle
-    themeToggle.addEventListener('change', () => {
-        if (themeToggle.checked) {
-            body.classList.add('dark-mode');
-            localStorage.setItem('theme', 'dark');
-        } else {
-            body.classList.remove('dark-mode');
-            localStorage.setItem('theme', 'light');
-        }
-    });
+    // Function to create and display a message bubble (UPDATED)
+   function displayMessage(messageData, type) {
+    const div = document.createElement('div');
+    div.classList.add('message', type);
+    
+    const originalText = document.createElement('p');
+    originalText.textContent = messageData.originalMessage;
+    div.appendChild(originalText);
 
-    // Apply theme when the page loads
-    applySavedTheme();
+    // This condition is now corrected to only apply to received messages
+    if (type === 'received' && messageData.translatedMessage && messageData.originalMessage !== messageData.translatedMessage) {
+        const translatedText = document.createElement('p');
+        translatedText.className = 'translation hidden';
+        translatedText.textContent = messageData.translatedMessage;
 
+        const toggleBtn = document.createElement('button');
+        toggleBtn.className = 'toggle-translation';
+        toggleBtn.textContent = 'See Translation';
 
-    // --- Logout Logic ---
-    const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            localStorage.removeItem('token');
-            // We also remove the theme preference on logout
-            localStorage.removeItem('theme');
-            window.location.href = 'login.html';
+        toggleBtn.addEventListener('click', () => {
+            translatedText.classList.toggle('hidden');
+            toggleBtn.textContent = translatedText.classList.contains('hidden') ? 'See Translation' : 'Hide Translation';
         });
+
+        div.appendChild(toggleBtn);
+        div.appendChild(translatedText);
     }
 
-    // --- Placeholder for future chat logic ---
-    // 1. Connect to the Socket.IO server
-    const socket = io('http://localhost:5000');
+    messageArea.appendChild(div);
+    messageArea.scrollTop = messageArea.scrollHeight;
+}
 
-    // Get DOM elements for the chat
-    const messageForm = document.getElementById('message-form');
-    const messageInput = document.getElementById('message-input');
-    const messageArea = document.getElementById('message-area');
+    // --- 6. EVENT LISTENERS ---
 
-    // 2. Handle sending messages
+    // Listener for the theme toggle switch
+    themeToggleButton.addEventListener('click', () => {
+    body.classList.toggle('dark-mode');
+    const isDarkMode = body.classList.contains('dark-mode');
+    localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+
+    if (isDarkMode) {
+        sunIcon.classList.add('hidden');
+        moonIcon.classList.remove('hidden');
+    } else {
+        sunIcon.classList.remove('hidden');
+        moonIcon.classList.add('hidden');
+    }
+});
+
+    // Listener for the logout button
+    logoutBtn.addEventListener('click', () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('theme'); 
+        window.location.href = 'login.html';
+    });
+
+    // Listener for sending a message (UPDATED)
     messageForm.addEventListener('submit', (e) => {
-        e.preventDefault(); // Prevent page reload
-
+        e.preventDefault();
         const msgText = messageInput.value.trim();
-        if (msgText) {
-            // Send the message to the server
-            socket.emit('chatMessage', msgText);
 
-            // Display the message you just sent
-            displayMessage(msgText, 'sent');
-
-            messageInput.value = ''; // Clear the input field
+        if (msgText && activeRecipient) {
+            socket.emit('privateMessage', { 
+                recipientId: activeRecipient.id, 
+                message: msgText 
+            });
+            
+            // Display your own sent message
+            displayMessage({ originalMessage: msgText, translatedMessage: null }, 'sent');
+            
+            messageInput.value = '';
             messageInput.focus();
+        } else if (!activeRecipient) {
+            alert('Please select a user to chat with first.');
         }
     });
-
-    // 3. Handle receiving messages
-    socket.on('chatMessage', (msg) => {
-        // Display the incoming message from others
-        displayMessage(msg, 'received');
-    });
-
-    // Helper function to create and append a message bubble
-    function displayMessage(message, type) {
-        const div = document.createElement('div');
-        div.classList.add('message', type); // e.g., <div class="message sent">
-
-        const p = document.createElement('p');
-        p.textContent = message;
-
-        div.appendChild(p);
-        messageArea.appendChild(div);
-
-        // Auto-scroll to the latest message
-        messageArea.scrollTop = messageArea.scrollHeight;
-    }
+    
+    // --- 7. INITIALIZATION ---
+    applySavedTheme();
+    fetchAndDisplayUsers();
 });

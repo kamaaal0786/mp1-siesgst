@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - ChatLang</title>
+    <link rel="stylesheet" href="profile.css"> </head>
+<body>
+    <div class="auth-container">
+        <div class="auth-box">
+            <h2>My Profile</h2>
+            <form id="profile-form">
+                <div class="input-group">
+                    <input type="text" id="username" required />
+                    <label>Username</label>
+                </div>
+                <div class="input-group disabled-group">
+    <input type="email" id="email" required disabled />
+    <label>Email (cannot be changed)</label>
+</div>
+                <div class="input-group">
+                    <select id="native-language" required></select>
+                </div>
+                <div class="input-group">
+                    <select id="target-language" required></select>
+                </div>
+                <button type="submit" class="cta-btn">Save Changes</button>
+                <p class="switch">
+                    <a href="chat.html">← Back to Chat</a>
+                </p>
+            </form>
+        </div>
+    </div>
+    <script src="profile.js"></script>
+</body>
+</html>
