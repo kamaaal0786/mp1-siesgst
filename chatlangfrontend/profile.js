@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    const API_URL = 'http://localhost:5000/api/profile/me';
+    const API_URL = 'https://chatlang-backend.onrender.com/api/profile/me';
     const form = document.getElementById('profile-form');
     const usernameInput = document.getElementById('username');
     const emailInput = document.getElementById('email');

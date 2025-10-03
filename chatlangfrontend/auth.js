@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('login-form');
 
     // The base URL for your backend API
-    const API_URL = 'http://localhost:5000/api/auth';
+    const API_URL = 'https://chatlang-backend.onrender.com/api/auth';
 
     // --- Handle Registration ---
     // auth.js
