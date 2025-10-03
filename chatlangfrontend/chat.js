@@ -1,10 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- 1. CONFIGURATION & INITIAL CHECKS ---
-    
-    // IMPORTANT: Replace this placeholder with your actual live Render backend URL
-    const BACKEND_URL = 'https://chatlang-backend.onrender.com'; 
-
+    const BACKEND_URL = 'https://chatlang-backend.onrender.com';
     const token = localStorage.getItem('token');
+
     if (!token) {
         window.location.href = 'login.html';
         return;
@@ -43,10 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const usernameLink = document.getElementById('username-link');
 
     // --- 4. SOCKET.IO CONNECTION ---
-    const socket = io(BACKEND_URL); // Use the live URL for the socket connection
-    
+    const socket = io(BACKEND_URL);
+
     socket.on('connect', () => {
-        console.log('Connected to server!');
         if (currentUserId) {
             socket.emit('storeUserId', currentUserId);
         }
@@ -59,7 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- 5. FUNCTIONS ---
-
     async function loadCurrentUserProfile() {
         if (!usernameLink) return;
         try {
@@ -73,13 +69,15 @@ document.addEventListener('DOMContentLoaded', () => {
             usernameLink.textContent = 'Profile';
         }
     }
-    
+
     const applySavedTheme = () => {
         const savedTheme = localStorage.getItem('theme');
         const isDarkMode = savedTheme === 'dark';
         body.classList.toggle('dark-mode', isDarkMode);
-        sunIcon.classList.toggle('hidden', isDarkMode);
-        moonIcon.classList.toggle('hidden', !isDarkMode);
+        if (sunIcon && moonIcon) {
+            sunIcon.classList.toggle('hidden', isDarkMode);
+            moonIcon.classList.toggle('hidden', !isDarkMode);
+        }
     };
 
     const fetchAndDisplayUsers = async () => {
@@ -95,14 +93,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 li.className = 'user-item';
                 li.dataset.id = user._id;
                 li.dataset.username = user.username;
-                li.innerHTML = `<span>${user.username} <small>(${user.nativeLanguage} -> ${user.targetLanguage})</small></span>`;
+                const nativeLang = user.nativeLanguage || '?';
+                const targetLang = user.targetLanguage || '?';
+                li.innerHTML = `<span>${user.username} <small>(${nativeLang} -> ${targetLang})</small></span>`;
+                
                 li.addEventListener('click', async () => {
+                    // This is the corrected line
                     document.querySelectorAll('.user-item.active').forEach(item => item.classList.remove('active'));
                     li.classList.add('active');
+                    
                     activeRecipient = { id: user._id, username: user.username };
                     chatHeader.textContent = `Chat with ${activeRecipient.username}`;
                     setChatState('chatting');
                     messageArea.innerHTML = '';
+
                     try {
                         const historyRes = await fetch(`${BACKEND_URL}/api/messages/${activeRecipient.id}`, {
                             headers: { 'Authorization': `Bearer ${token}` }
@@ -120,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } catch (error) { console.error('Error fetching users:', error); }
     };
-    
+
     function displayMessage(messageData, type) {
         const div = document.createElement('div');
         div.classList.add('message', type);
