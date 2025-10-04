@@ -1,3 +1,4 @@
+// chat.js (Corrected)
 document.addEventListener('DOMContentLoaded', () => {
     // --- 1. CONFIGURATION & INITIAL CHECKS ---
     const BACKEND_URL = 'https://chatlang-backend.onrender.com';
@@ -23,7 +24,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!currentUserId) return;
 
     // --- 2. STATE MANAGEMENT ---
-    let activeRecipient = null;
+    let activeRecipient = null; // Will store { id, username, nativeLanguage }
+    let currentUser = null; // Will store current user's profile info
 
     // --- 3. DOM ELEMENTS ---
     const body = document.body;
@@ -37,124 +39,140 @@ document.addEventListener('DOMContentLoaded', () => {
     const messageForm = document.getElementById('message-form');
     const messageInput = document.getElementById('message-input');
     const welcomeScreen = document.getElementById('welcome-screen');
-    const chatContent = document.querySelector('.chat-content');
-    const usernameLink = document.getElementById('username-link');
-
-    // --- 4. SOCKET.IO CONNECTION ---
-    const socket = io(BACKEND_URL);
-
-    socket.on('connect', () => {
-        if (currentUserId) {
-            socket.emit('storeUserId', currentUserId);
-        }
-    });
-
-    socket.on('privateMessage', (messageData) => {
-        if (activeRecipient && messageData.senderId === activeRecipient.id) {
-            displayMessage(messageData, 'received');
-        }
+    const chatContent = document.getElementById('chat-content');
+    const userProfileName = document.getElementById('user-profile-name');
+    const userProfileLang = document.getElementById('user-profile-lang');
+    
+    // --- 4. SOCKET.IO INITIALIZATION ---
+    const socket = io(BACKEND_URL, {
+      query: { userId: currentUserId }
     });
 
     // --- 5. FUNCTIONS ---
-    async function loadCurrentUserProfile() {
-        if (!usernameLink) return;
-        try {
-            const res = await fetch(`${BACKEND_URL}/api/profile/me`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (!res.ok) return;
-            const user = await res.json();
-            usernameLink.textContent = user.username;
-        } catch (error) {
-            usernameLink.textContent = 'Profile';
-        }
-    }
 
+    // Apply saved theme from localStorage
     const applySavedTheme = () => {
         const savedTheme = localStorage.getItem('theme');
-        const isDarkMode = savedTheme === 'dark';
-        body.classList.toggle('dark-mode', isDarkMode);
-        if (sunIcon && moonIcon) {
-            sunIcon.classList.toggle('hidden', isDarkMode);
-            moonIcon.classList.toggle('hidden', !isDarkMode);
+        if (savedTheme === 'dark') {
+            body.classList.add('dark-mode');
+            moonIcon.style.display = 'none';
+            sunIcon.style.display = 'inline-block';
+        } else {
+            body.classList.remove('dark-mode');
+            sunIcon.style.display = 'none';
+            moonIcon.style.display = 'inline-block';
         }
     };
 
-    const fetchAndDisplayUsers = async () => {
+    // Fetch and display the current user's profile
+    const loadCurrentUserProfile = async () => {
         try {
-            const res = await fetch(`${BACKEND_URL}/api/users`, {
+            const response = await fetch(`${BACKEND_URL}/api/auth/profile`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (!res.ok) throw new Error('Failed to fetch users');
-            const users = await res.json();
-            userList.innerHTML = '';
+            if (!response.ok) throw new Error('Failed to fetch profile');
+            
+            currentUser = await response.json();
+            userProfileName.textContent = currentUser.username;
+            userProfileLang.textContent = currentUser.nativeLanguage;
+        } catch (error) {
+            console.error('Error loading profile:', error);
+        }
+    };
+    
+    // Fetch and render the list of other users
+    const loadUsers = async () => {
+        try {
+            const response = await fetch(`${BACKEND_URL}/api/users`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) throw new Error('Failed to fetch users');
+            
+            const users = await response.json();
+            userList.innerHTML = ''; // Clear placeholder or old list
+            
             users.forEach(user => {
                 const li = document.createElement('li');
-                li.className = 'user-item';
-                li.dataset.id = user._id;
+                li.dataset.userId = user._id;
                 li.dataset.username = user.username;
-                const nativeLang = user.nativeLanguage || '?';
-                const targetLang = user.targetLanguage || '?';
-                li.innerHTML = `<span>${user.username} <small>(${nativeLang} -> ${targetLang})</small></span>`;
-                
-                li.addEventListener('click', async () => {
-                    // This is the corrected line
-                    document.querySelectorAll('.user-item.active').forEach(item => item.classList.remove('active'));
-                    li.classList.add('active');
-                    
-                    activeRecipient = { id: user._id, username: user.username };
-                    chatHeader.textContent = `Chat with ${activeRecipient.username}`;
-                    setChatState('chatting');
-                    messageArea.innerHTML = '';
-
-                    try {
-                        const historyRes = await fetch(`${BACKEND_URL}/api/messages/${activeRecipient.id}`, {
-                            headers: { 'Authorization': `Bearer ${token}` }
-                        });
-                        const messageHistory = await historyRes.json();
-                        messageHistory.forEach(msg => {
-                            const messageType = msg.senderId === currentUserId ? 'sent' : 'received';
-                            displayMessage(msg, messageType);
-                        });
-                    } catch (error) {
-                        console.error('Failed to fetch chat history:', error);
-                    }
-                });
+                li.dataset.lang = user.nativeLanguage;
+                li.innerHTML = `
+                    <img src="https://i.pravatar.cc/40?u=${user._id}" alt="${user.username}" class="avatar">
+                    <div class="user-info">
+                        <span class="username">${user.username}</span>
+                        <span class="language">${user.nativeLanguage}</span>
+                    </div>
+                `;
+                li.addEventListener('click', () => selectUserForChat(li, user));
                 userList.appendChild(li);
             });
-        } catch (error) { console.error('Error fetching users:', error); }
+
+        } catch (error) {
+            console.error('Error loading users:', error);
+            userList.innerHTML = '<li>Failed to load users.</li>';
+        }
+    };
+    
+    const selectUserForChat = (liElement, user) => {
+        // Update active recipient
+        activeRecipient = {
+            id: user._id,
+            username: user.username,
+            nativeLanguage: user.nativeLanguage
+        };
+        
+        // Update UI
+        chatHeader.textContent = `Chat with ${user.username}`;
+        
+        // Highlight active user
+        document.querySelectorAll('#user-list li').forEach(li => li.classList.remove('active'));
+        liElement.classList.add('active');
+
+        // Clear previous messages and show chat
+        messageArea.innerHTML = '';
+        updateChatState('chatting');
+        
+        // Fetch message history
+        loadMessageHistory(user._id);
     };
 
-    function displayMessage(messageData, type) {
-        const div = document.createElement('div');
-        div.classList.add('message', type);
-        const originalText = document.createElement('p');
-        originalText.textContent = messageData.originalMessage;
-        div.appendChild(originalText);
-        if (type === 'received' && messageData.translatedMessage && messageData.originalMessage !== messageData.translatedMessage) {
-            const translatedText = document.createElement('p');
-            translatedText.className = 'translation hidden';
-            translatedText.textContent = messageData.translatedMessage;
-            const toggleBtn = document.createElement('button');
-            toggleBtn.className = 'toggle-translation';
-            toggleBtn.textContent = 'See Translation';
-            toggleBtn.addEventListener('click', () => {
-                translatedText.classList.toggle('hidden');
-                toggleBtn.textContent = translatedText.classList.contains('hidden') ? 'See Translation' : 'Hide Translation';
+    const loadMessageHistory = async (recipientId) => {
+        try {
+            const response = await fetch(`${BACKEND_URL}/api/messages/${recipientId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
             });
-            div.appendChild(toggleBtn);
-            div.appendChild(translatedText);
+            if (!response.ok) throw new Error('Failed to fetch messages');
+            const messages = await response.json();
+            messages.forEach(msg => {
+                const type = msg.senderId === currentUserId ? 'sent' : 'received';
+                displayMessage(msg, type);
+            });
+        } catch (error) {
+            console.error('Error loading message history:', error);
         }
-        messageArea.appendChild(div);
-        messageArea.scrollTop = messageArea.scrollHeight;
     }
+
+    // Display a single message in the chat area
+    const displayMessage = (msg, type) => {
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('message', type);
+        
+        const messageContent = (type === 'sent') 
+            ? msg.originalMessage 
+            : `${msg.translatedMessage} <em>(${msg.originalMessage})</em>`;
+
+        messageElement.innerHTML = `<p>${messageContent}</p>`;
+        messageArea.appendChild(messageElement);
+        messageArea.scrollTop = messageArea.scrollHeight;
+    };
     
-    const setChatState = (state) => {
+    // Update the UI between welcome screen and chat screen
+    const updateChatState = (state) => {
         if (state === 'welcome') {
             welcomeScreen.classList.remove('hidden');
             chatContent.classList.add('hidden');
             messageInput.disabled = true;
-            messageInput.placeholder = 'Select a user to start chatting...';
+            messageInput.placeholder = 'Select a user to start chatting';
         } else if (state === 'chatting') {
             welcomeScreen.classList.add('hidden');
             chatContent.classList.remove('hidden');
@@ -192,10 +210,18 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Please select a user to chat with first.');
         }
     });
+    
+    // Listen for incoming messages from the server
+    socket.on('privateMessage', (msg) => {
+        // Only display if the message is from the currently active chat partner
+        if (activeRecipient && msg.senderId === activeRecipient.id) {
+            displayMessage(msg, 'received');
+        }
+    });
 
     // --- 7. INITIALIZATION ---
     loadCurrentUserProfile();
+    loadUsers(); // <-- This is the new function call to populate the sidebar
     applySavedTheme();
-    fetchAndDisplayUsers();
-    setChatState('welcome');
+    updateChatState('welcome'); // Start with the welcome screen
 });
