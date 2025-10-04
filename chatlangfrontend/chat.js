@@ -1,14 +1,10 @@
-// chat.js (Corrected)
 document.addEventListener('DOMContentLoaded', () => {
-    // --- 1. CONFIGURATION & INITIAL CHECKS ---
-    const BACKEND_URL = 'https://chatlang-backend.onrender.com';
+// --- 1. INITIAL CHECKS & SETUP ---
     const token = localStorage.getItem('token');
-
     if (!token) {
         window.location.href = 'login.html';
         return;
-    }
-
+    }    // Helper function to get user ID from the JWT payload
     function decodeToken(token) {
         try {
             const payload = JSON.parse(atob(token.split('.')[1]));
@@ -21,207 +17,180 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     const currentUserId = decodeToken(token);
-    if (!currentUserId) return;
+    if (!currentUserId) return; // Stop if token is invalid
 
     // --- 2. STATE MANAGEMENT ---
-    let activeRecipient = null; // Will store { id, username, nativeLanguage }
-    let currentUser = null; // Will store current user's profile info
+    let activeRecipient = null; // To track who we are chatting with
 
     // --- 3. DOM ELEMENTS ---
     const body = document.body;
-    const themeToggleBtn = document.getElementById('theme-toggle-btn');
-    const sunIcon = document.querySelector('.sun-icon');
-    const moonIcon = document.querySelector('.moon-icon');
+    const themeToggleButton = document.getElementById('theme-toggle-btn');
+const sunIcon = themeToggleButton.querySelector('.fa-sun');
+const moonIcon = themeToggleButton.querySelector('.fa-moon');
     const logoutBtn = document.getElementById('logout-btn');
     const userList = document.getElementById('user-list');
     const chatHeader = document.querySelector('.chat-header h2');
     const messageArea = document.getElementById('message-area');
     const messageForm = document.getElementById('message-form');
     const messageInput = document.getElementById('message-input');
-    const welcomeScreen = document.getElementById('welcome-screen');
-    const chatContent = document.getElementById('chat-content');
-    const userProfileName = document.getElementById('user-profile-name');
-    const userProfileLang = document.getElementById('user-profile-lang');
+    messageInput.disabled = true;
+messageInput.placeholder = 'Select a user to start chatting...';
+    chatHeader.textContent = 'Begin your chat!';
+
+ // --- 4. SOCKET.IO CONNECTION ---
+    const socket = io('http://localhost:5000');
     
-    // --- 4. SOCKET.IO INITIALIZATION ---
-    const socket = io(BACKEND_URL, {
-      query: { userId: currentUserId }
+    // A) Tell the server who we are once connected
+    socket.on('connect', () => {
+        console.log('Connected to server with socket ID:', socket.id);
+        socket.emit('storeUserId', currentUserId);
     });
-
-    // --- 5. FUNCTIONS ---
-
-    // Apply saved theme from localStorage
-    const applySavedTheme = () => {
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'dark') {
-            body.classList.add('dark-mode');
-            moonIcon.style.display = 'none';
-            sunIcon.style.display = 'inline-block';
-        } else {
-            body.classList.remove('dark-mode');
-            sunIcon.style.display = 'none';
-            moonIcon.style.display = 'inline-block';
+     // B) Listen for incoming private messages (UPDATED)
+    socket.on('privateMessage', (messageData) => {
+        console.log('--- RECEIVED MESSAGE DATA FROM SERVER ---', messageData);
+        // Only display the message if it's from the person we're actively chatting with
+        if (activeRecipient && messageData.senderId === activeRecipient.id) {
+            displayMessage(messageData, 'received');
         }
-    };
-
-    // Fetch and display the current user's profile
-    const loadCurrentUserProfile = async () => {
-        try {
-            const response = await fetch(`${BACKEND_URL}/api/auth/profile`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (!response.ok) throw new Error('Failed to fetch profile');
-            
-            currentUser = await response.json();
-            userProfileName.textContent = currentUser.username;
-            userProfileLang.textContent = currentUser.nativeLanguage;
-        } catch (error) {
-            console.error('Error loading profile:', error);
-        }
-    };
+    });
     
-    // Fetch and render the list of other users
-    const loadUsers = async () => {
+    // --- 5. FUNCTIONS ---
+     // Function to apply the saved theme from localStorage
+    const applySavedTheme = () => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        body.classList.add('dark-mode');
+        sunIcon.classList.add('hidden');
+        moonIcon.classList.remove('hidden');
+    } else {
+        body.classList.remove('dark-mode');
+        sunIcon.classList.remove('hidden');
+        moonIcon.classList.add('hidden');
+    }
+};
+    // Function to fetch users and make the list interactive
+   const fetchAndDisplayUsers = async () => {
         try {
-            const response = await fetch(`${BACKEND_URL}/api/users`, {
+            const res = await fetch('http://localhost:5000/api/users', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (!response.ok) throw new Error('Failed to fetch users');
+            if (!res.ok) throw new Error('Failed to fetch users');
             
-            const users = await response.json();
-            userList.innerHTML = ''; // Clear placeholder or old list
-            
+            const users = await res.json();
+            userList.innerHTML = ''; 
+
             users.forEach(user => {
                 const li = document.createElement('li');
-                li.dataset.userId = user._id;
+                li.className = 'user-item';
+                li.dataset.id = user._id; 
                 li.dataset.username = user.username;
-                li.dataset.lang = user.nativeLanguage;
-                li.innerHTML = `
-                    <img src="https://i.pravatar.cc/40?u=${user._id}" alt="${user.username}" class="avatar">
-                    <div class="user-info">
-                        <span class="username">${user.username}</span>
-                        <span class="language">${user.nativeLanguage}</span>
-                    </div>
-                `;
-                li.addEventListener('click', () => selectUserForChat(li, user));
+                li.innerHTML = `<span>${user.username} <small>(${user.nativeLanguage} -> ${user.targetLanguage})</small></span>`;
+                
+                // This entire click listener is updated
+                li.addEventListener('click', async () => { // Make the function async
+                    document.querySelectorAll('.user-item.active').forEach(item => item.classList.remove('active'));
+                    li.classList.add('active');
+                    activeRecipient = { id: user._id, username: user.username };
+                    chatHeader.textContent = `Chat with ${activeRecipient.username}`;
+                    messageInput.disabled = false;
+messageInput.placeholder = 'Type a message...';
+                    messageArea.innerHTML = ''; // Clear the message area first
+
+                    // --- NEW: Fetch and display chat history ---
+                    try {
+                        const historyRes = await fetch(`http://localhost:5000/api/messages/${activeRecipient.id}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const messageHistory = await historyRes.json();
+                        
+                        // Loop through the history and display each message
+                        messageHistory.forEach(msg => {
+                            const messageType = msg.senderId === currentUserId ? 'sent' : 'received';
+                            displayMessage(msg, messageType);
+                        });
+                    } catch (error) {
+                        console.error('Failed to fetch chat history:', error);
+                    }
+                    // --- END NEW ---
+                });
                 userList.appendChild(li);
             });
-
         } catch (error) {
-            console.error('Error loading users:', error);
-            userList.innerHTML = '<li>Failed to load users.</li>';
+            console.error('Error fetching users:', error);
         }
     };
+     // Function to create and display a message bubble (UPDATED)
+   function displayMessage(messageData, type) {
+    const div = document.createElement('div');
+    div.classList.add('message', type);
     
-    const selectUserForChat = (liElement, user) => {
-        // Update active recipient
-        activeRecipient = {
-            id: user._id,
-            username: user.username,
-            nativeLanguage: user.nativeLanguage
-        };
-        
-        // Update UI
-        chatHeader.textContent = `Chat with ${user.username}`;
-        
-        // Highlight active user
-        document.querySelectorAll('#user-list li').forEach(li => li.classList.remove('active'));
-        liElement.classList.add('active');
+    const originalText = document.createElement('p');
+    originalText.textContent = messageData.originalMessage;
+    div.appendChild(originalText);
 
-        // Clear previous messages and show chat
-        messageArea.innerHTML = '';
-        updateChatState('chatting');
-        
-        // Fetch message history
-        loadMessageHistory(user._id);
-    };
+    // This condition is now corrected to only apply to received messages
+    if (type === 'received' && messageData.translatedMessage && messageData.originalMessage !== messageData.translatedMessage) {
+        const translatedText = document.createElement('p');
+        translatedText.className = 'translation hidden';
+        translatedText.textContent = messageData.translatedMessage;
 
-    const loadMessageHistory = async (recipientId) => {
-        try {
-            const response = await fetch(`${BACKEND_URL}/api/messages/${recipientId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (!response.ok) throw new Error('Failed to fetch messages');
-            const messages = await response.json();
-            messages.forEach(msg => {
-                const type = msg.senderId === currentUserId ? 'sent' : 'received';
-                displayMessage(msg, type);
-            });
-        } catch (error) {
-            console.error('Error loading message history:', error);
-        }
+        const toggleBtn = document.createElement('button');
+        toggleBtn.className = 'toggle-translation';
+        toggleBtn.textContent = 'See Translation';
+
+        toggleBtn.addEventListener('click', () => {
+            translatedText.classList.toggle('hidden');
+            toggleBtn.textContent = translatedText.classList.contains('hidden') ? 'See Translation' : 'Hide Translation';
+        });
+
+        div.appendChild(toggleBtn);
+        div.appendChild(translatedText);
     }
-
-    // Display a single message in the chat area
-    const displayMessage = (msg, type) => {
-        const messageElement = document.createElement('div');
-        messageElement.classList.add('message', type);
-        
-        const messageContent = (type === 'sent') 
-            ? msg.originalMessage 
-            : `${msg.translatedMessage} <em>(${msg.originalMessage})</em>`;
-
-        messageElement.innerHTML = `<p>${messageContent}</p>`;
-        messageArea.appendChild(messageElement);
-        messageArea.scrollTop = messageArea.scrollHeight;
-    };
-    
-    // Update the UI between welcome screen and chat screen
-    const updateChatState = (state) => {
-        if (state === 'welcome') {
-            welcomeScreen.classList.remove('hidden');
-            chatContent.classList.add('hidden');
-            messageInput.disabled = true;
-            messageInput.placeholder = 'Select a user to start chatting';
-        } else if (state === 'chatting') {
-            welcomeScreen.classList.add('hidden');
-            chatContent.classList.remove('hidden');
-            messageInput.disabled = false;
-            messageInput.placeholder = 'Type a message...';
-        }
-    };
-    
-    // --- 6. EVENT LISTENERS ---
-    themeToggleBtn.addEventListener('click', () => {
-        body.classList.toggle('dark-mode');
-        const isDarkMode = body.classList.contains('dark-mode');
-        localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
-        applySavedTheme();
-    });
-
+     messageArea.appendChild(div);
+    messageArea.scrollTop = messageArea.scrollHeight;
+}
+   // --- 6. EVENT LISTENERS ---
+    // Listener for the theme toggle switch
+    themeToggleButton.addEventListener('click', () => {
+    body.classList.toggle('dark-mode');
+    const isDarkMode = body.classList.contains('dark-mode');
+    localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+     if (isDarkMode) {
+        sunIcon.classList.add('hidden');
+        moonIcon.classList.remove('hidden');
+    } else {
+        sunIcon.classList.remove('hidden');
+        moonIcon.classList.add('hidden');
+    }
+});
+ // Listener for the logout button
     logoutBtn.addEventListener('click', () => {
         localStorage.removeItem('token');
-        localStorage.removeItem('theme');
+        localStorage.removeItem('theme'); 
         window.location.href = 'login.html';
     });
-
+// Listener for sending a message (UPDATED)
     messageForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const msgText = messageInput.value.trim();
+
         if (msgText && activeRecipient) {
-            socket.emit('privateMessage', {
-                recipientId: activeRecipient.id,
-                message: msgText
+            socket.emit('privateMessage', { 
+                recipientId: activeRecipient.id, 
+                message: msgText 
             });
-            displayMessage({ originalMessage: msgText }, 'sent');
+            
+            // Display your own sent message
+            displayMessage({ originalMessage: msgText, translatedMessage: null }, 'sent');
+            
             messageInput.value = '';
             messageInput.focus();
         } else if (!activeRecipient) {
             alert('Please select a user to chat with first.');
         }
     });
-    
-    // Listen for incoming messages from the server
-    socket.on('privateMessage', (msg) => {
-        // Only display if the message is from the currently active chat partner
-        if (activeRecipient && msg.senderId === activeRecipient.id) {
-            displayMessage(msg, 'received');
-        }
-    });
-
+      
     // --- 7. INITIALIZATION ---
-    loadCurrentUserProfile();
-    loadUsers(); // <-- This is the new function call to populate the sidebar
     applySavedTheme();
-    updateChatState('welcome'); // Start with the welcome screen
+    fetchAndDisplayUsers();
 });

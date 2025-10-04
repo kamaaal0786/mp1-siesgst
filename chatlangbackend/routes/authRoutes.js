@@ -5,9 +5,8 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-
 // --- REGISTER ROUTE ---
-router.post('/register', async (req, res) => {
+router.post('/register', async (req, res) => { 
   const { username, email, password, nativeLanguage, targetLanguage } = req.body;
   try {
     let user = await User.findOne({ email });
@@ -15,20 +14,15 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ msg: 'A user with this email already exists' });
     }
     user = await User.findOne({ username });
-     if (user) {
+if (user) {
       return res.status(400).json({ msg: 'This username is already taken' });
     }
-
     user = new User({ username, email, password, nativeLanguage, targetLanguage });
-
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(password, salt);
-
     await user.save();
-
     const payload = { user: { id: user.id } };
-
-    jwt.sign(
+    wt.sign(
       payload,
       process.env.JWT_SECRET,
       { expiresIn: '5h' },
@@ -42,7 +36,6 @@ router.post('/register', async (req, res) => {
     res.status(500).json({ msg: 'Server Error' });
   }
 });
-
 // --- LOGIN ROUTE ---
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
@@ -51,14 +44,11 @@ router.post('/login', async (req, res) => {
     if (!user) {
       return res.status(400).json({ msg: 'Invalid Credentials' });
     }
-
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ msg: 'Invalid Credentials' });
     }
-
     const payload = { user: { id: user.id } };
-
     jwt.sign(
       payload,
       process.env.JWT_SECRET,
@@ -73,5 +63,4 @@ router.post('/login', async (req, res) => {
     res.status(500).json({ msg: 'Server Error' });
   }
 });
-
 module.exports = router;

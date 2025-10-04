@@ -1,93 +1,67 @@
-// server.js (Corrected)
 require('dotenv').config();
+const Message = require('./models/Message');
+const { translateText } = require('./services/translationService');
+const User = require('./models/User');
 const express = require('express');
-const http = require('http');
-const { Server } = require("socket.io");
+const http = require('http'); // 1. Import Node's built-in http module
+const { Server } = require("socket.io"); // 2. Import the Server class from socket.io
 const cors = require('cors');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
-const userRoutes = require('./routes/userRoutes');
-const messageRoutes = require('./routes/messageRoutes');
-const Message = require('./models/Message');
-const User = require('./models/User');
-const { translateText } = require('./services/translationService');
-
+console.log('Value of JWT_SECRET on startup:', process.env.JWT_SECRET);
 const app = express();
-const server = http.createServer(app);
+const server = http.createServer(app); // 3. Create an HTTP server with our Express app
 
-// --- CORS Configuration ---
-// Define allowed origins for both Express and Socket.IO
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  'https://mp1-siesgst.vercel.app', // Your production frontend URL
-  'http://localhost:5500', // For local development
-  'http://127.0.0.1:5500' // For local development
-].filter(Boolean); // Filter out any undefined URLs
+// 4. Initialize Socket.IO and attach it to the server
+// We configure CORS for Socket.IO to allow our frontend origin
+const io = new Server(server, {
+  cors: {
+    origin: "*", // For development, allow any origin. For production, restrict this to your frontend URL.
+    methods: ["GET", "POST"]
+  }
+});
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
-    }
-    return callback(null, true);
-  },
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true
-};
-
-// Use CORS middleware for all API routes
-app.use(cors(corsOptions));
+app.use(cors());
 app.use(express.json());
 
 
 // --- API Routes ---
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/messages', messageRoutes);
+app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/messages', require('./routes/messageRoutes'));
+app.use('/api/profile', require('./routes/profileRoutes'));
 
-// --- Socket.IO Setup ---
-const io = new Server(server, {
-  cors: {
-    origin: allowedOrigins,
-    methods: ["GET", "POST"]
-  }
-});
 
-const userSocketMap = new Map(); // Maps userId to socketId
+// --- Socket.IO Connection Logic ---
+const userSocketMap = new Map();
 
+// --- Socket.IO Connection Logic (FINAL, ROBUST VERSION) ---
 io.on('connection', (socket) => {
-    console.log('✅ A user connected:', socket.id);
+  console.log('✅ A user connected:', socket.id);
 
-    const userId = socket.handshake.query.userId;
-    if (userId) {
+    socket.on('storeUserId', (userId) => {
         userSocketMap.set(userId, socket.id);
+        socket.userId = userId;
         console.log(`User ${userId} mapped to socket ${socket.id}`);
-    }
+    });
 
     socket.on('privateMessage', async ({ recipientId, message }) => {
         try {
             const sender = await User.findById(socket.userId);
             const recipient = await User.findById(recipientId);
 
-            if (!sender || !recipient) {
-                console.error("Sender or recipient not found.");
-                return;
-            }
+            if (!sender || !recipient) return;
 
-            const translatedMessage = await translateText(message, sender.nativeLanguage, recipient.nativeLanguage);
-
+          const translatedMessage = await translateText(message, sender.nativeLanguage, recipient.nativeLanguage);
             const newMessage = new Message({
-                senderId: sender._id,
-                recipientId: recipient._id,
-                originalMessage: message,
-                translatedMessage: translatedMessage
-            });
-            await newMessage.save();
-
+        senderId: sender._id,
+        recipientId: recipient._id,
+        originalMessage: message,
+        translatedMessage: translatedMessage
+      });
+      await newMessage.save();
             const recipientSocketId = userSocketMap.get(recipientId);
+
             if (recipientSocketId) {
                 io.to(recipientSocketId).emit('privateMessage', {
                     senderId: socket.userId,
@@ -101,29 +75,24 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
-        // Find which userId disconnected and remove them from the map
-        for (let [key, value] of userSocketMap.entries()) {
-            if (value === socket.id) {
-                userSocketMap.delete(key);
-                break;
-            }
+        if (socket.userId) {
+            userSocketMap.delete(socket.userId);
         }
         console.log('❌ A user disconnected:', socket.id);
     });
 });
-
-// --- Server Startup ---
+// --- Server Startup Logic ---
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   try {
     await connectDB();
+    // 5. Start the server using server.listen() instead of app.listen()
     server.listen(PORT, () => {
       console.log(`🚀 Server is running on port ${PORT}`);
     });
   } catch (error) {
-    console.error("Failed to start server:", error);
-    process.exit(1);
+    console.error("Failed to connect to the database. Server did not start.", error);
   }
 };
 
