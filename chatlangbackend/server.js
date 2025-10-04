@@ -19,13 +19,12 @@ const server = http.createServer(app); // 3. Create an HTTP server with our Expr
 
 // 4. Initialize Socket.IO and attach it to the server
 // We configure CORS for Socket.IO to allow our frontend origin
-const io = new Server(server, {
-  cors: {
-    origin: [process.env.FRONTEND_URL, "https://mp1-siesgst.vercel.app"],
-    methods: ["GET", "POST"]
-  }
-});
-app.use(cors());
+const corsOptions = {
+    origin: 'https://mp1-siesgst-q3dq832fa-kamaals-projects-931a6d43.vercel.app', // 👈 Replace with your frontend's actual URL
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 
 
