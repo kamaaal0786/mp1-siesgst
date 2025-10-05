@@ -15,8 +15,8 @@ const myMemoryCodes = {
 };
 
 async function translateText(text, sourceLang, targetLang) {
-    const sourceCode = myMemoryCodes[sourceLang];
-    const targetCode = myMemoryCodes[targetLang];
+    const sourceCode = languageCodes[sourceLang];
+    const targetCode = languageCodes[targetLang];
 
     if (!sourceCode || !targetCode || sourceCode === targetCode) {
         return text;
