@@ -10,6 +10,7 @@ const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 console.log('Value of JWT_SECRET on startup:', process.env.JWT_SECRET);
 const app = express();
+app.set('trust proxy', 1);
 const server = http.createServer(app); // 3. Create an HTTP server with our Express app
 
 // 4. Initialize Socket.IO and attach it to the server
