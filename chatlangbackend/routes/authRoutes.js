@@ -22,7 +22,7 @@ if (user) {
     user.password = await bcrypt.hash(password, salt);
     await user.save();
     const payload = { user: { id: user.id } };
-    wt.sign(
+    jwt.sign(
       payload,
       process.env.JWT_SECRET,
       { expiresIn: '5h' },

@@ -3,48 +3,38 @@ const Message = require('./models/Message');
 const { translateText } = require('./services/translationService');
 const User = require('./models/User');
 const express = require('express');
-const http = require('http');
-const { Server } = require("socket.io");
+const http = require('http'); // 1. Import Node's built-in http module
+const { Server } = require("socket.io"); // 2. Import the Server class from socket.io
 const cors = require('cors');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
-
+console.log('Value of JWT_SECRET on startup:', process.env.JWT_SECRET);
 const app = express();
-// This is crucial for Render/Vercel to trust the proxy and handle HTTPS correctly.
 app.set('trust proxy', 1);
+const server = http.createServer(app); // 3. Create an HTTP server with our Express app
 
-const server = http.createServer(app);
-
-// --- START: CORRECT CORS CONFIGURATION ---
-
-// Define the single, correct URL of your deployed frontend.
-// IMPORTANT: Replace this with your actual frontend URL.
-const frontendURL = "https://mp1-siesgst.vercel.app"; 
-
-// Apply CORS middleware to all Express routes.
+// 4. Initialize Socket.IO and attach it to the server
+// We configure CORS for Socket.IO to allow our frontend origin
+const corsOptions = {
+  origin: "https://mp1-siesgst.vercel.app/", // <-- REPLACE THIS WITH YOUR FRONTEND URL
+  credentials: true
+};
 app.use(cors({
-  origin: frontendURL,
+  origin: ["https://mpl-siesgst.vercel.app", "https://chatlang.vercel.app"],
   credentials: true
 }));
-
-// Initialize Socket.IO with a strict and correct CORS policy.
+// 2. Configure Socket.IO with a strict CORS policy and force WebSocket transport
 const io = new Server(server, {
   cors: {
-    origin: frontendURL,
+    origin: ["https://mpl-siesgst.vercel.app", "https://chatlang.vercel.app"],
     methods: ["GET", "POST"],
     credentials: true
   }
 });
-// --- END: CORRECT CORS CONFIGURATION ---
-
-
 app.use(express.json());
-
 // --- Health Check Route ---
-// This route responds to the hosting platform's health checks to keep the server alive.
 app.get('/', (req, res) => {
-  res.setHeader('Content-Type', 'text/plain');
-  res.send('Server is healthy and running!');
+  res.send('Server is up and running!');
 });
 
 
@@ -53,11 +43,21 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/messages', require('./routes/messageRoutes'));
 app.use('/api/profile', require('./routes/profileRoutes'));
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ msg: 'Something went wrong!' });
+});
+
+// Handle 404 routes
+app.use('*', (req, res) => {
+    res.status(404).json({ msg: 'Route not found' });
+});
 
 
 // --- Socket.IO Connection Logic ---
 const userSocketMap = new Map();
 
+// --- Socket.IO Connection Logic (FINAL, ROBUST VERSION) ---
 io.on('connection', (socket) => {
   console.log('✅ A user connected:', socket.id);
 
@@ -103,13 +103,13 @@ io.on('connection', (socket) => {
         console.log('❌ A user disconnected:', socket.id);
     });
 });
-
 // --- Server Startup Logic ---
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   try {
     await connectDB();
+    // 5. Start the server using server.listen() instead of app.listen()
     server.listen(PORT, () => {
       console.log(`🚀 Server is running on port ${PORT}`);
     });
