@@ -16,7 +16,7 @@ const server = http.createServer(app); // 3. Create an HTTP server with our Expr
 // We configure CORS for Socket.IO to allow our frontend origin
 const io = new Server(server, {
   cors: {
-    origin: "*", // For development, allow any origin. For production, restrict this to your frontend URL.
+    origin: "https://chatlang.vercel.app", // For development, allow any origin. For production, restrict this to your frontend URL.
     methods: ["GET", "POST"]
   }
 });
