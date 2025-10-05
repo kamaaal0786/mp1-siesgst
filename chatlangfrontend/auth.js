@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const registerForm = document.getElementById('register-form');
     const loginForm = document.getElementById('login-form');
-    const API_URL = 'http://localhost:5000/api/auth';
+    const API_URL = 'https://chatlang-u6n3.onrender.com';
 
     if (registerForm) {
         registerForm.addEventListener('submit', async (e) => {

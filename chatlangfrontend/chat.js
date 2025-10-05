@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!usernameLink) return;
 
         try {
-            const res = await fetch('http://localhost:5000/api/profile/me', {
+            const res = await fetch('https://chatlang-u6n3.onrender.com/api/profile/me', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!res.ok) return;
@@ -55,7 +55,7 @@ messageInput.placeholder = 'Select a user to start chatting...';
     chatHeader.textContent = 'Begin your chat!';
 
  // --- 4. SOCKET.IO CONNECTION ---
-    const socket = io('http://localhost:5000');
+    const socket = io('https://chatlang-u6n3.onrender.com');
     
     // A) Tell the server who we are once connected
     socket.on('connect', () => {
@@ -88,7 +88,7 @@ messageInput.placeholder = 'Select a user to start chatting...';
     // Function to fetch users and make the list interactive
    const fetchAndDisplayUsers = async () => {
         try {
-            const res = await fetch('http://localhost:5000/api/users', {
+            const res = await fetch('https://chatlang-u6n3.onrender.com/api/users', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!res.ok) throw new Error('Failed to fetch users');
@@ -115,7 +115,7 @@ messageInput.placeholder = 'Type a message...';
 
                     // --- NEW: Fetch and display chat history ---
                     try {
-                        const historyRes = await fetch(`http://localhost:5000/api/messages/${activeRecipient.id}`, {
+                        const historyRes = await fetch(`https://chatlang-u6n3.onrender.com/api/messages/${activeRecipient.id}`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
                         const messageHistory = await historyRes.json();
