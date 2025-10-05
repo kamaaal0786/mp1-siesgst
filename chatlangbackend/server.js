@@ -10,19 +10,26 @@ const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 console.log('Value of JWT_SECRET on startup:', process.env.JWT_SECRET);
 const app = express();
-
+app.set('trust proxy', 1);
 const server = http.createServer(app); // 3. Create an HTTP server with our Express app
 
 // 4. Initialize Socket.IO and attach it to the server
 // We configure CORS for Socket.IO to allow our frontend origin
+const corsOptions = {
+  origin: "https://mp1-siesgst.vercel.app/", // <-- REPLACE THIS WITH YOUR FRONTEND URL
+  credentials: true
+};
+app.use(cors(corsOptions));
+
+// 2. Configure Socket.IO with a strict CORS policy and force WebSocket transport
 const io = new Server(server, {
   cors: {
-    origin: "https://chatlang.vercel.app", // For development, allow any origin. For production, restrict this to your frontend URL.
-    methods: ["GET", "POST"]
-  }
+    origin: "https://mp1-siesgst.vercel.app/", // <-- REPLACE THIS AGAIN
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+  transports: ["websocket"] // <-- This forces a secure connection
 });
-
-app.use(cors());
 app.use(express.json());
 
 
