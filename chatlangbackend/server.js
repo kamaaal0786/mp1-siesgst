@@ -31,6 +31,10 @@ const io = new Server(server, {
   transports: ["websocket"] // <-- This forces a secure connection
 });
 app.use(express.json());
+// --- Health Check Route ---
+app.get('/', (req, res) => {
+  res.send('Server is up and running!');
+});
 
 
 // --- API Routes ---
