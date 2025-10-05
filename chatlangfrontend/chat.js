@@ -55,9 +55,8 @@ messageInput.placeholder = 'Select a user to start chatting...';
     chatHeader.textContent = 'Begin your chat!';
 
  // --- 4. SOCKET.IO CONNECTION ---
-    const socket = io('https://chatlang-u6n3.onrender.com', {
-  transports: ["websocket"] // <-- This forces a secure connection
-});
+    const socket = io('https://chatlang-u6n3.onrender.com');
+    
     
     // A) Tell the server who we are once connected
     socket.on('connect', () => {
