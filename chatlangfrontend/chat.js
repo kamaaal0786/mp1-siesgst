@@ -18,6 +18,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const currentUserId = decodeToken(token);
     if (!currentUserId) return; // Stop if token is invalid
+     async function loadCurrentUserProfile() {
+        const usernameLink = document.getElementById('username-link');
+        if (!usernameLink) return;
+
+        try {
+            const res = await fetch('http://localhost:5000/api/profile/me', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) return;
+            
+            const user = await res.json();
+            usernameLink.textContent = user.username;
+        } catch (error) {
+            console.error('Failed to fetch user profile:', error);
+            // The link text will just remain "ChatLang" on error
+        }
+    }
 
     // --- 2. STATE MANAGEMENT ---
     let activeRecipient = null; // To track who we are chatting with
@@ -191,6 +208,7 @@ messageInput.placeholder = 'Type a message...';
     });
       
     // --- 7. INITIALIZATION ---
+     loadCurrentUserProfile();
     applySavedTheme();
     fetchAndDisplayUsers();
 });
