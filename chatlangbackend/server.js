@@ -14,20 +14,32 @@ console.log('Value of JWT_SECRET on startup:', process.env.JWT_SECRET);
 const app = express();
 const server = http.createServer(app);
 
-// ✅ FIXED CORS Configuration
-const io = new Server(server, {
-  cors: {
-    origin: ["https://mpl-siesgst.vercel.app", "https://chatlang.vercel.app"],
-    methods: ["GET", "POST"],
-    credentials: true
-  }
-});
+// ✅ **FIXED: Correct CORS Configuration**
+const allowedOrigins = [
+  'https://mpl-siesgst.vercel.app',
+  'https://chatlang.vercel.app',
+  'http://localhost:3000' // for local development
+];
 
-// ✅ FIXED Express CORS
+// ✅ **FIXED: Express CORS Middleware**
 app.use(cors({
-  origin: ["https://mpl-siesgst.vercel.app", "https://chatlang.vercel.app"],
-  credentials: true
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
+
+// ✅ **ADD: Handle preflight requests**
+app.options('*', cors()); // Enable preflight for all routes
 
 app.use(express.json());
 
@@ -37,36 +49,37 @@ app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/messages', require('./routes/messageRoutes'));
 app.use('/api/profile', require('./routes/profileRoutes'));
 
-// ✅ ADD: Health check route (important for deployment)
+// ✅ Health check route
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'OK', message: 'Server is running' });
+  res.status(200).json({ 
+    status: 'OK', 
+    message: 'Server is running',
+    timestamp: new Date().toISOString()
+  });
 });
 
-// ✅ ADD: Root route
+// ✅ Root route
 app.get('/', (req, res) => {
   res.status(200).json({ 
     message: 'ChatLang Backend API', 
     status: 'running',
-    version: '1.0.0'
+    version: '1.0.0',
+    endpoints: {
+      auth: '/api/auth',
+      users: '/api/users',
+      messages: '/api/messages',
+      profile: '/api/profile'
+    }
   });
 });
 
-// ✅ FIXED: Proper 404 handler (place this AFTER all routes)
-app.use((req, res) => {
-  res.status(404).json({ 
-    success: false, 
-    message: 'Route not found. Please check the API endpoint.' 
-  });
-});
-
-// ✅ ADD: Global error handler
-app.use((err, req, res, next) => {
-  console.error('Global error handler:', err);
-  res.status(500).json({ 
-    success: false, 
-    message: 'Internal server error',
-    error: process.env.NODE_ENV === 'production' ? {} : err.message
-  });
+// ✅ **FIXED: Socket.IO CORS Configuration**
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true
+  }
 });
 
 // --- Socket.IO Connection Logic ---
@@ -118,6 +131,25 @@ io.on('connection', (socket) => {
   });
 });
 
+// ✅ **FIXED: Proper 404 handler (MUST be after all routes)**
+app.use('*', (req, res) => {
+  res.status(404).json({ 
+    success: false, 
+    message: 'API endpoint not found',
+    path: req.originalUrl
+  });
+});
+
+// ✅ Global error handler
+app.use((err, req, res, next) => {
+  console.error('Global error handler:', err);
+  res.status(500).json({ 
+    success: false, 
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'production' ? {} : err.message
+  });
+});
+
 // --- Server Startup Logic ---
 const PORT = process.env.PORT || 5000;
 
@@ -126,7 +158,8 @@ const startServer = async () => {
     await connectDB();
     server.listen(PORT, () => {
       console.log(`🚀 Server is running on port ${PORT}`);
-      console.log(`📍 Health check: http://localhost:${PORT}/health`);
+      console.log(`📍 Health check: https://chatlang-u6n3.onrender.com/health`);
+      console.log(`📍 Allowed origins:`, allowedOrigins);
     });
   } catch (error) {
     console.error("Failed to connect to the database. Server did not start.", error);
