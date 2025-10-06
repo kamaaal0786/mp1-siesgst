@@ -119,6 +119,23 @@ messageInput.placeholder = 'Type a message...';
             console.error('Error fetching users:', error);
         }
     };
+       async function loadCurrentUserProfile() {
+        const usernameLink = document.getElementById('username-link');
+        if (!usernameLink) return;
+
+        try {
+            const res = await fetch('http://localhost:5000/api/profile/me', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) return;
+            
+            const user = await res.json();
+            usernameLink.textContent = user.username;
+        } catch (error) {
+            console.error('Failed to fetch user profile:', error);
+            // The link text will just remain "ChatLang" on error
+        }
+    }
      // Function to create and display a message bubble (UPDATED)
    function displayMessage(messageData, type) {
     const div = document.createElement('div');
@@ -191,6 +208,7 @@ messageInput.placeholder = 'Type a message...';
     });
       
     // --- 7. INITIALIZATION ---
+    loadCurrentUserProfile()
     applySavedTheme();
     fetchAndDisplayUsers();
 });
