@@ -30,9 +30,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/messages', require('./routes/messageRoutes'));
 app.use('/api/profile', require('./routes/profileRoutes'));
-app.get('/', (req, res) => {
-  res.send('🚀 API is running successfully on Render!');
-});
+
 
 // --- Socket.IO Connection Logic (FINAL, ROBUST VERSION) ---
 io.on('connection', (socket) => {
