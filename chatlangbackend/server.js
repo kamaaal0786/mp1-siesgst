@@ -32,6 +32,9 @@ app.use('/api/messages', require('./routes/messageRoutes'));
 app.use('/api/profile', require('./routes/profileRoutes'));
 
 
+// --- Socket.IO Connection Logic ---
+const userSocketMap = new Map();
+
 // --- Socket.IO Connection Logic (FINAL, ROBUST VERSION) ---
 io.on('connection', (socket) => {
   console.log('✅ A user connected:', socket.id);
